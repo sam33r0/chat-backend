@@ -1,6 +1,6 @@
 import mongoose, { Schema } from "mongoose";
 
-const messageSchema = new Schema({
+const directMessageSchema = new Schema({
     content:{
         type: String,
         required: true
@@ -9,11 +9,11 @@ const messageSchema = new Schema({
         type: Schema.Types.ObjectId,
         ref: "User"
     },
-    room:{
+    reciever:{
         type: Schema.Types.ObjectId,
-        ref: "Room"
+        ref: "User"
     }
 
-})
+},{timestamps: true})
 
-export const Message= mongoose.model("Message",messageSchema);
+export const DirectMessage= mongoose.model("DirectMessage",directMessageSchema);

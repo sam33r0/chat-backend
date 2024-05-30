@@ -10,7 +10,13 @@ const roomSchema = new Schema({
     visibility: {
         type: Boolean,
         required: true,
-    }
+    },
+    members: [
+        {
+            type: Schema.Types.ObjectId,
+            ref: "User"
+        }
+    ]
 }, { timestamps: true })
 
-export const Room= mongoose.model("Room", roomSchema);
+export const Room = mongoose.model("Room", roomSchema);
