@@ -7,10 +7,6 @@ const roomSchema = new Schema({
         trim: true,
         index: true,
     },
-    visibility: {
-        type: Boolean,
-        required: true,
-    },
     members: [
         {
             type: Schema.Types.ObjectId,
