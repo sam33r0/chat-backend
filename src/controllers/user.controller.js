@@ -40,10 +40,10 @@ const register = asyncHandler(async (req, res) => {
     // if (!avatar)
     //     throw new ApiError(400, "Avatar file is required");
     const user = await User.create({
-        email, 
-        fullName, 
-        avatar: avatar.url, 
-        age, 
+        email,
+        fullName,
+        avatar: avatar.url,
+        age,
         password
     })
 
@@ -61,8 +61,8 @@ const register = asyncHandler(async (req, res) => {
 
 })
 
-const loginUser = asyncHandler(async (req,res) => {
-    const { email,  password } = req.body;
+const loginUser = asyncHandler(async (req, res) => {
+    const { email, password } = req.body;
 
     if (!email) {
         throw new ApiError(400, "username or email is required");
@@ -98,6 +98,10 @@ const loginUser = asyncHandler(async (req,res) => {
 const logoutUser = asyncHandler(async (req, res) => {
     // cookies clear
     // reset refreshToken
+    const { google } = req.body;
+    if (google) {
+        return res.status(200).clearCookie("connect.sid").json(new ApiResponse(200, {}, "user logged out successfully"));
+    }
     await User.findByIdAndUpdate(
         req.user._id,
         {

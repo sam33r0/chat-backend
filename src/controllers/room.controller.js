@@ -1,8 +1,8 @@
 import mongoose from "mongoose";
-import { Room } from "../models/room.model";
-import { ApiError } from "../utils/ApiError";
-import { asyncHandler } from "../utils/asyncHandler";
-import { ApiResponse } from "../utils/ApiResponse";
+import { Room } from "../models/room.model.js";
+import { ApiError } from "../utils/ApiError.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
+import { ApiResponse } from "../utils/ApiResponse.js";
 
 const createRoom = asyncHandler(async (req, res) => {
     const { title } = req.body;

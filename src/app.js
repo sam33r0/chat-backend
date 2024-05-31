@@ -35,39 +35,46 @@ passport.use(
         scope: ["profile", "email"]
     },
         async (accessToken, refreshToken, profile, done) => {
-            console.log(profile);
             try {
                 let user = await User.findOne({
                     email: profile.emails[0].value
                 })
                 if (!user) {
-                    user= new User({
+                    user = new User({
                         email: profile.emails[0].value,
-                        fullName: profile.fullName,
+                        fullName: profile.displayName,
                         avatar: profile.photos[0].value,
                     })
                     await user.save();
                 }
-                return done(null,user);
+                return done(null, user);
             } catch (error) {
                 return done(error, null)
             }
         }
     )
 )
-passport.serializeUser((user,done)=>{
-    done(null,user);
+passport.serializeUser((user, done) => {
+    done(null, user);
 })
-passport.deserializeUser((user,done)=>{
-    done(null,user)
+passport.deserializeUser((user, done) => {
+    done(null, user)
 })
 
-app.get('/auth/google',passport.authenticate("google",{scope:["profile", "email"]}))
-app.get('/auth/google/callback',passport.authenticate("google",{
+app.get('/auth/google', passport.authenticate("google", { scope: ["profile", "email"] }))
+app.get('/auth/google/callback', passport.authenticate("google", {
     successRedirect: "http://localhost:5173/dashboard",
-    failureRedirect:"http://localhost:5173/login"
+    failureRedirect: "http://localhost:5173/login"
 }))
 app.get('/', (req, res) => {
     res.json({ "message": "It is live" })
 });
+
+import RoomRouter from "./routes/room.routes.js";
+app.use("/api/v1/room",RoomRouter);
+import messageRouter from "./routes/message.routes.js"
+app.use("/api/v1/message",messageRouter);
+import userRouter from "./routes/user.routes.js"
+app.use("/api/v1/user",userRouter);
+
 export { app };
