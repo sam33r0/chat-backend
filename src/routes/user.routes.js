@@ -3,7 +3,7 @@ import { verifyJWT } from "../middlewares/auth.middleware.js";
 import { 
     loginUser,
     logoutUser, 
-    register } from "../controllers/user.controller";
+    register } from "../controllers/user.controller.js";
 const router = Router();
 
 router.route('/register').post(register);

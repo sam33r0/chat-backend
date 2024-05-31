@@ -71,10 +71,10 @@ app.get('/', (req, res) => {
 });
 
 import RoomRouter from "./routes/room.routes.js";
-app.use("/api/v1/room",RoomRouter);
+app.use("/api/v1/room", RoomRouter);
 import messageRouter from "./routes/message.routes.js"
-app.use("/api/v1/message",messageRouter);
+app.use("/api/v1/message", messageRouter);
 import userRouter from "./routes/user.routes.js"
-app.use("/api/v1/user",userRouter);
+app.use("/api/v1/user", userRouter);
 
 export { app };

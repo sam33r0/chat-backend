@@ -9,7 +9,7 @@ router.use(verifyJWT);
 router.route('/create').post(createRoom);
 router.route('/add').post(addMember);
 router.route('/test').get((req,res)=>{
-    res.json(new ApiResponse(201,{},"afa"))
+    res.json(new ApiResponse(201,{user: req.user},"afa"))
 })
 
 export default router;

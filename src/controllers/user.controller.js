@@ -99,7 +99,12 @@ const logoutUser = asyncHandler(async (req, res) => {
     // cookies clear
     // reset refreshToken
     const { google } = req.body;
+    console.log(req.body);
     if (google) {
+        console.log("google",google);
+        req.logout(function(err){
+            res.redirect(process.env.CORS_ORIGIN + '/login');
+        })
         return res.status(200).clearCookie("connect.sid").json(new ApiResponse(200, {}, "user logged out successfully"));
     }
     await User.findByIdAndUpdate(
