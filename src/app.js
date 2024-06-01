@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import bodyParser from "body-parser";
 import session from "express-session";
 import passport from "passport";
 import { Strategy as OAuth2Strategy } from "passport-google-oauth2";
@@ -17,6 +18,7 @@ app.use(express.json({ limit: "32kb" }))
 app.use(express.urlencoded({ extended: true, limit: "32kb" }))
 app.use(express.static("public"))
 app.use(cookieParser());
+app.use(bodyParser.json())
 
 app.use(session({
     secret: process.env.SESSION_SECRET,

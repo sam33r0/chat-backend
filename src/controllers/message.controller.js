@@ -51,7 +51,76 @@ const roomMessage = asyncHandler(async (req, res) => {
     return res.status(201).json(new ApiResponse(201, message, "Message sent successfully"));
 })
 
+const directMessList = asyncHandler(async (req, res) => {
+    const rid = req.params;
+    const { rec } = req.body;
+    const user = req.user;
+    const id = rid || rec;
+    const messages = await DirectMessage.aggregate([
+        {
+            $match: {
+                $and: [{ reciever: new mongoose.Types.ObjectId(id) }, { author: new mongoose.Types.ObjectId(user._id) }]
+            },
+
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "author",
+                foreignField: "_id",
+                as: "authorName",
+                pipeline: [{
+                    $project: {
+                        fullName: 1,
+                        avatar: 1,
+                    }
+                }]
+            }
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "reciever",
+                foreignField: "_id",
+                as: "recieverName",
+                pipeline: [{
+                    $project: {
+                        fullName: 1,
+                        avatar: 1,
+                    }
+                }]
+            }
+        },
+        {
+            $addFields: {
+                sender: {
+                    $first: "$authorName"
+                }
+            }
+        },
+        {
+            $addFields: {
+                recieverUser: {
+                    $first: "$recieverName"
+                }
+            }
+        },
+        {
+            $project: {
+                recieverUser: 1,
+                sender: 1,
+                content: 1,
+            }
+        }
+    ])
+    if (messages?.length == 0)
+        throw new ApiError(401, "Unable to retreive messages");
+    return res.status(201).json(new ApiResponse(201, messages, "messages aggregated"));
+
+})
+
 export {
     directMessage,
-    roomMessage
+    roomMessage,
+    directMessList
 }

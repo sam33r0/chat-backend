@@ -42,6 +42,76 @@ const addMember = asyncHandler(async (req, res) => {
     return res.status(201).json(new ApiResponse(201, room, "member added"));
 })
 
+const roomMessage = asyncHandler(async (req, res) => {
+
+    const rid = req.params;
+    const { roomId } = req.body;
+    const user = req.user;
+    const id = new mongoose.Types.ObjectId(rid || roomId);
+    const messages = await DirectMessage.aggregate([
+        {
+            $match: {
+                room: id
+            }
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "author",
+                foreignField: "_id",
+                as: "authorName",
+                pipeline: [{
+                    $project: {
+                        fullName: 1,
+                        avatar: 1,
+                    }
+                }]
+            }
+        },
+        {
+            $addFields: {
+                authorName: {
+                    $first: "$authorName"
+                }
+            }
+        },
+        {
+            $lookup: {
+                from: "rooms",
+                localField: "room",
+                foreignField: "_id",
+                as: "roomName",
+                pipeline: [{
+                    $project: {
+                        title: 1,
+                        members: 1,
+                    }
+                }]
+            }
+        },
+        {
+            $addFields: {
+                roomDetail: {
+                    $first: "$roomName"
+                }
+            }
+        },
+        {
+            $project: {
+                content: 1,
+                author: 1,
+                room: 1,
+                roomDetail: 1,
+                authorName: 1
+            }
+        }
+    ])
+    if (messages?.length == 0)
+        throw new ApiError(401, "Unable to retreive messages");
+    return res.status(201).json(new ApiResponse(201, messages, "messages aggregated"));
+
+
+})
 export {
     createRoom,
     addMember

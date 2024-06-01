@@ -63,7 +63,7 @@ const register = asyncHandler(async (req, res) => {
 
 const loginUser = asyncHandler(async (req, res) => {
     const { email, password } = req.body;
-
+    console.log(req.body,"printing begins here",email);
     if (!email) {
         throw new ApiError(400, "username or email is required");
     }
@@ -98,15 +98,12 @@ const loginUser = asyncHandler(async (req, res) => {
 const logoutUser = asyncHandler(async (req, res) => {
     // cookies clear
     // reset refreshToken
-    const { google } = req.body;
-    console.log(req.body);
-    if (google) {
-        console.log("google",google);
-        req.logout(function(err){
-            res.redirect(process.env.CORS_ORIGIN + '/login');
-        })
-        return res.status(200).clearCookie("connect.sid").json(new ApiResponse(200, {}, "user logged out successfully"));
-    }
+    req.logout(function (err) {
+        res.redirect(process.env.CORS_ORIGIN + '/login');
+    })
+})
+
+const logoutJWTUser = asyncHandler(async (req, res) => {
     await User.findByIdAndUpdate(
         req.user._id,
         {
@@ -128,5 +125,6 @@ const logoutUser = asyncHandler(async (req, res) => {
 export {
     register,
     loginUser,
-    logoutUser
+    logoutUser,
+    logoutJWTUser
 }
