@@ -42,7 +42,7 @@ const addMember = asyncHandler(async (req, res) => {
     return res.status(201).json(new ApiResponse(201, room, "member added"));
 })
 
-const roomMessage = asyncHandler(async (req, res) => {
+const roomMessageList = asyncHandler(async (req, res) => {
 
     const rid = req.params;
     const { roomId } = req.body;
@@ -114,5 +114,6 @@ const roomMessage = asyncHandler(async (req, res) => {
 })
 export {
     createRoom,
-    addMember
+    addMember,
+    roomMessageList
 }

@@ -11,7 +11,7 @@ const directMessage = asyncHandler(async (req, res) => {
     const user = req.user;
     const recieve = req.params;
     const { content, recieverId } = req.body;
-    const rec = recieve || recieverId;
+    const rec = recieverId || recieve;
     const author = new mongoose.Types.ObjectId(user?._id);
     const reciever = new mongoose.Types.ObjectId(rec);
     const dm = await DirectMessage.create({
