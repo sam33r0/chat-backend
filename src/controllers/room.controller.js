@@ -47,7 +47,8 @@ const roomMessageList = asyncHandler(async (req, res) => {
     const rid = req.params;
     const { roomId } = req.body;
     const user = req.user;
-    const id = new mongoose.Types.ObjectId(rid || roomId);
+    const rrid= rid || roomId;
+    const id = new mongoose.Types.ObjectId(rrid);
     const messages = await DirectMessage.aggregate([
         {
             $match: {

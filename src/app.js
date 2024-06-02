@@ -70,7 +70,7 @@ app.get('/auth/google/callback', passport.authenticate("google", {
 }))
 app.get('/', (req, res) => {
     res.json({ "message": "It is live" })
-});
+}); 
 
 import RoomRouter from "./routes/room.routes.js";
 app.use("/api/v1/room", RoomRouter);

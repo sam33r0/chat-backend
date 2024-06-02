@@ -55,11 +55,30 @@ const directMessList = asyncHandler(async (req, res) => {
     const rid = req.params;
     const { rec } = req.body;
     const user = req.user;
-    const id = rid || rec;
+    const id =  rec;
     const messages = await DirectMessage.aggregate([
         {
             $match: {
-                $and: [{ reciever: new mongoose.Types.ObjectId(id) }, { author: new mongoose.Types.ObjectId(user._id) }]
+                $or: [
+                    {
+                        $and:
+                            [{
+                                reciever: new mongoose.Types.ObjectId(user._id)
+                            },
+                            {
+                                author: new mongoose.Types.ObjectId(id)
+                            }]
+                    },
+                    {
+                        $and:
+                            [{
+                                reciever: new mongoose.Types.ObjectId(id)
+                            },
+                            {
+                                author: new mongoose.Types.ObjectId(user._id)
+                            }]
+                    }
+                ]
             },
 
         },

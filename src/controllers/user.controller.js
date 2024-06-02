@@ -2,7 +2,8 @@ import { ApiError } from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js"
 import { User } from "../models/user.model.js"
 import { ApiResponse } from "../utils/ApiResponse.js";
-
+import { Connection } from "../models/connections.model.js";
+import mongoose from "mongoose";
 const generateAccessAndRefreshToken = async (userId) => {
     try {
         const user = await User.findById(userId)
@@ -18,6 +19,46 @@ const generateAccessAndRefreshToken = async (userId) => {
         throw new ApiError(500, "Something went wrong while generating access and refresh token");
     }
 }
+
+const getUserConnectionsWithDetails = async (userId) => {
+    try {
+        const results = await Connection.aggregate([
+            {
+                $match: { user: mongoose.Types.ObjectId(userId) }
+            },
+            {
+                $lookup: {
+                    from: 'users', 
+                    localField: 'contacts',
+                    foreignField: '_id',
+                    as: 'contactDetails'
+                }
+            },
+            {
+                $project: {
+                    _id: 1, 
+                    user: 1,
+                    contacts: {
+                        $map: {
+                            input: '$contactDetails',
+                            as: 'contact',
+                            in: {
+                                fullName: '$$contact.fullName',
+                                avatar: '$$contact.avatar'
+                            }
+                        }
+                    }
+                }
+            }
+        ]);
+
+        return results;
+    } catch (error) {
+        console.error('Error in aggregation pipeline:', error);
+        throw error;
+    }
+};
+
 
 const register = asyncHandler(async (req, res) => {
     const { email, fullName, avatar, age, password } = req.body;
@@ -54,26 +95,29 @@ const register = asyncHandler(async (req, res) => {
     if (!createdUser) {
         throw new ApiError(500, "Something went wrong while registering the user");
     }
-
+    const connections = await Connection.create({
+        user: new mongoose.Types.ObjectId(createdUser._id),
+        contacts: []
+    })
     return res.status(201).json(
-        new ApiResponse(201, createdUser, "User registered Successfully")
+        new ApiResponse(201, createdUser, connections, "User registered Successfully")
     )
 
 })
 
 const loginUser = asyncHandler(async (req, res) => {
     const { email, password } = req.body;
-    console.log(req.body,"printing begins here",email);
+    console.log(req.body, "printing begins here", email);
     if (!email) {
         throw new ApiError(400, "username or email is required");
     }
-
     const user = await User.findOne({
         email
     })
     if (!user) {
         throw new ApiError(404, "user does not exist please register");
     }
+    const connections = await getUserConnectionsWithDetails(user._id);
     const isPasswordValid = await user.isPasswordCorrect(password);
     if (!isPasswordValid) {
         throw new ApiError(401, "Invalid Password");
@@ -88,7 +132,7 @@ const loginUser = asyncHandler(async (req, res) => {
     return res.status(200).cookie("accessToken", accessToken, options).cookie("refreshToken", refreshToken, options).json(
         new ApiResponse(200,
             {
-                user: loggedInUser, accessToken, refreshToken,
+                user: loggedInUser, accessToken, refreshToken, connections
             },
             "User logged In Successfully"
         )
