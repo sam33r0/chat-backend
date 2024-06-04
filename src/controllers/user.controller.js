@@ -24,7 +24,7 @@ const getUserConnectionsWithDetails = async (userId) => {
     try {
         const results = await Connection.aggregate([
             {
-                $match: { user: mongoose.Types.ObjectId(userId) }
+                $match: { user: new mongoose.Types.ObjectId(userId) }
             },
             {
                 $lookup: {
@@ -107,7 +107,6 @@ const register = asyncHandler(async (req, res) => {
 
 const loginUser = asyncHandler(async (req, res) => {
     const { email, password } = req.body;
-    console.log(req.body, "printing begins here", email);
     if (!email) {
         throw new ApiError(400, "username or email is required");
     }

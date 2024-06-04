@@ -65,7 +65,7 @@ passport.deserializeUser((user, done) => {
 
 app.get('/auth/google', passport.authenticate("google", { scope: ["profile", "email"] }))
 app.get('/auth/google/callback', passport.authenticate("google", {
-    successRedirect: "http://localhost:5173/dashboard",
+    successRedirect: "http://localhost:5173/dashboard/google",
     failureRedirect: "http://localhost:5173/login"
 }))
 app.get('/', (req, res) => {
@@ -78,5 +78,7 @@ import messageRouter from "./routes/message.routes.js"
 app.use("/api/v1/message", messageRouter);
 import userRouter from "./routes/user.routes.js"
 app.use("/api/v1/user", userRouter);
+import connectionRouter from "./routes/connection.routes.js";
+app.use("/api/v1/contact", connectionRouter)
 
 export { app };

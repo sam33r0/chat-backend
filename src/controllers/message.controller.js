@@ -126,6 +126,7 @@ const directMessList = asyncHandler(async (req, res) => {
         },
         {
             $project: {
+                _id:0,
                 recieverUser: 1,
                 sender: 1,
                 content: 1,
