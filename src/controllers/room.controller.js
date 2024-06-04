@@ -6,13 +6,14 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 
 const createRoom = asyncHandler(async (req, res) => {
     const { title } = req.body;
+    if (existingRoom) {
+        throw new ApiError(402, "room already exist");
+    }
     const user = new mongoose.Types.ObjectId(req.user?._id);
     const members = [];
     members.push(user);
     const existingRoom = await Room.findOne({ title });
-    if (existingRoom) {
-        throw new ApiError(402, "room already exist");
-    }
+    
     const room = await Room.create({
         title,
         members

@@ -45,26 +45,31 @@ const getUserConnectionsWithDetails = async (userId) => {
 };
 
 const createConnection = asyncHandler(async (req, res) => {
-    const { contact, email } = req.body;
-    if (!contact && !email)
+    const { email } = req.body;
+    console.log('hihi',email);
+    if (!email)
         throw new ApiError(401, "contact id not found");
     const user = req.user;
-    const connect = await Connection.findOne({ user: new mongoose.Types.ObjectId(user._id) });
+    const userIDobj = new mongoose.Types.ObjectId(user._id)
+    const connect = await Connection.findOne({ user: userIDobj });
     if (!connect)
         throw new ApiError(401, "Error in finding connetions");
-    if (contact) {
-        const contactObjectId = new mongoose.Types.ObjectId(contact);
-        connect.contacts.push(contactObjectId);
-    }
-    else if (email) {
-        const contact = await User.findOne(
-            { email }
-        )
-        if(!contact)
-            throw new ApiError("unable to find user");
-        const contactObjectId = new mongoose.Types.ObjectId(contact?._id);
-        connect.contacts.push(contactObjectId);
-    }
+
+    const contact = await User.findOne(
+        { email }
+    )
+    if (!contact)
+        throw new ApiError("unable to find user");
+    const contactObjectId = new mongoose.Types.ObjectId(contact?._id);
+    const connectOfContact = await Connection.findOne(
+        { 
+            user: contactObjectId
+        }
+    );
+   
+    connectOfContact.contacts.push(userIDobj);
+    connect.contacts.push(contactObjectId);
+    await connectOfContact.save({ validateBeforeSave: false })
     await connect.save({ validateBeforeSave: false });
     res.status(201).json(new ApiResponse(201, { user, connect }, "contact added successfully"));
 })
