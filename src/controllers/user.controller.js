@@ -27,27 +27,44 @@ const getUserConnectionsWithDetails = async (userId) => {
                 $match: { user: new mongoose.Types.ObjectId(userId) }
             },
             {
+                $unwind: "$contacts"
+            },
+            {
                 $lookup: {
-                    from: 'users', 
-                    localField: 'contacts',
+                    from: 'users',
+                    localField: 'contacts.contact',
                     foreignField: '_id',
                     as: 'contactDetails'
                 }
             },
             {
-                $project: {
-                    _id: 1, 
-                    user: 1,
+                $unwind: "$contactDetails"
+            },
+            {
+                $group: {
+                    _id: "$_id",
+                    user: { $first: "$user" },
                     contacts: {
-                        $map: {
-                            input: '$contactDetails',
-                            as: 'contact',
-                            in: {
-                                fullName: '$$contact.fullName',
-                                avatar: '$$contact.avatar'
-                            }
+                        $push: {
+                            contact: "$contacts.contact",
+                            update: "$contacts.update",
+                            fullName: "$contactDetails.fullName",
+                            avatar: "$contactDetails.avatar",
+                            updatedAt: "$contactDetails.updatedAt"
                         }
                     }
+                }
+            },
+            {
+                $project: {
+                    _id: 1,
+                    user: 1,
+                    contacts: 1
+                }
+            },
+            {
+                $sort: {
+                    "contacts.updatedAt": -1
                 }
             }
         ]);

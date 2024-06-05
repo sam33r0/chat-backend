@@ -6,9 +6,11 @@ import session from "express-session";
 import passport from "passport";
 import { Strategy as OAuth2Strategy } from "passport-google-oauth2";
 import { User } from "./models/user.model.js";
+import { Connection } from "./models/connections.model.js";
+import mongoose from "mongoose";
 const app = express();
 app.use(cors({
-    origin: "http://localhost:5173",
+    origin: process.env.CORS_ORIGIN,
     methods: "GET,POST,PUT,DELETE",
     credentials: true,
 }));
@@ -48,6 +50,10 @@ passport.use(
                         avatar: profile.photos[0].value,
                     })
                     await user.save();
+                    const connections = await Connection.create({
+                        user: new mongoose.Types.ObjectId(user._id),
+                        contacts: []
+                    })
                 }
                 return done(null, user);
             } catch (error) {

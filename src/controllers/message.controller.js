@@ -6,6 +6,7 @@ import { DirectMessage } from "../models/directMessage.model.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { Room } from "../models/room.model.js";
 import mongoose from "mongoose";
+import { Connection } from "../models/connections.model.js";
 
 const directMessage = asyncHandler(async (req, res) => {
     const user = req.user;
@@ -14,6 +15,18 @@ const directMessage = asyncHandler(async (req, res) => {
     const rec = recieverId || recieve;
     const author = new mongoose.Types.ObjectId(user?._id);
     const reciever = new mongoose.Types.ObjectId(rec);
+    const userConnection= await Connection.findOne({user: author});
+    const recConnection = await Connection.findOne({user: reciever});
+
+    const recIndex=userConnection.contacts.findIndex(x=> x.contact == reciever);
+    userConnection.contacts[recIndex].update= `new message at ${new Date.now()}`;
+
+    const userIndex= recConnection.contacts.findIndex(x=> x.contact == author);
+    recConnection.contacts[userIndex].update =`new message at ${new Date.now()}`;
+
+    await userConnection.save({validateBeforeSave: false});
+    await recConnection.save({validateBeforeSave: false});
+    
     const dm = await DirectMessage.create({
         content,
         author,
