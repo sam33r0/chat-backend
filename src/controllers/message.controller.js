@@ -10,23 +10,22 @@ import { Connection } from "../models/connections.model.js";
 
 const directMessage = asyncHandler(async (req, res) => {
     const user = req.user;
-    const recieve = req.params;
     const { content, recieverId } = req.body;
-    const rec = recieverId || recieve;
+    const rec = recieverId;
     const author = new mongoose.Types.ObjectId(user?._id);
     const reciever = new mongoose.Types.ObjectId(rec);
-    const userConnection= await Connection.findOne({user: author});
-    const recConnection = await Connection.findOne({user: reciever});
+    const userConnection = await Connection.findOne({ user: author });
+    const recConnection = await Connection.findOne({ user: reciever });
+    const recIndex = userConnection.contacts.findIndex(x => x.contact.equals(reciever));
+    //console.log(userConnection,recIndex);
+    userConnection.contacts[recIndex].update = `new message at ${new Date()}`;
 
-    const recIndex=userConnection.contacts.findIndex(x=> x.contact == reciever);
-    userConnection.contacts[recIndex].update= `new message at ${new Date.now()}`;
+    const userIndex = recConnection.contacts.findIndex(x => x.contact.equals(author));
+    recConnection.contacts[userIndex].update = `new message at ${new Date()}`;
 
-    const userIndex= recConnection.contacts.findIndex(x=> x.contact == author);
-    recConnection.contacts[userIndex].update =`new message at ${new Date.now()}`;
+    await userConnection.save({ validateBeforeSave: false });
+    await recConnection.save({ validateBeforeSave: false });
 
-    await userConnection.save({validateBeforeSave: false});
-    await recConnection.save({validateBeforeSave: false});
-    
     const dm = await DirectMessage.create({
         content,
         author,
@@ -65,35 +64,27 @@ const roomMessage = asyncHandler(async (req, res) => {
 })
 
 const directMessList = asyncHandler(async (req, res) => {
-    const rid = req.params;
     const { rec } = req.body;
     const user = req.user;
-    const id =  rec;
+    const id = rec;
     const messages = await DirectMessage.aggregate([
         {
             $match: {
                 $or: [
                     {
-                        $and:
-                            [{
-                                reciever: new mongoose.Types.ObjectId(user._id)
-                            },
-                            {
-                                author: new mongoose.Types.ObjectId(id)
-                            }]
+                        $and: [
+                            { reciever: new mongoose.Types.ObjectId(user._id) },
+                            { author: new mongoose.Types.ObjectId(id) }
+                        ]
                     },
                     {
-                        $and:
-                            [{
-                                reciever: new mongoose.Types.ObjectId(id)
-                            },
-                            {
-                                author: new mongoose.Types.ObjectId(user._id)
-                            }]
+                        $and: [
+                            { reciever: new mongoose.Types.ObjectId(id) },
+                            { author: new mongoose.Types.ObjectId(user._id) }
+                        ]
                     }
                 ]
-            },
-
+            }
         },
         {
             $lookup: {
@@ -101,12 +92,14 @@ const directMessList = asyncHandler(async (req, res) => {
                 localField: "author",
                 foreignField: "_id",
                 as: "authorName",
-                pipeline: [{
-                    $project: {
-                        fullName: 1,
-                        avatar: 1,
+                pipeline: [
+                    {
+                        $project: {
+                            fullName: 1,
+                            avatar: 1
+                        }
                     }
-                }]
+                ]
             }
         },
         {
@@ -115,39 +108,35 @@ const directMessList = asyncHandler(async (req, res) => {
                 localField: "reciever",
                 foreignField: "_id",
                 as: "recieverName",
-                pipeline: [{
-                    $project: {
-                        fullName: 1,
-                        avatar: 1,
+                pipeline: [
+                    {
+                        $project: {
+                            fullName: 1,
+                            avatar: 1
+                        }
                     }
-                }]
+                ]
             }
         },
         {
             $addFields: {
-                sender: {
-                    $first: "$authorName"
-                }
+                sender: { $first: "$authorName" },
+                recieverUser: { $first: "$recieverName" }
             }
         },
         {
-            $addFields: {
-                recieverUser: {
-                    $first: "$recieverName"
-                }
-            }
+            $sort: { createdAt: 1 }  // Sort by createdAt in ascending order
         },
         {
             $project: {
-                _id:0,
+                _id: 0,
                 recieverUser: 1,
                 sender: 1,
                 content: 1,
+                createdAt: 1 // Optionally include createdAt if you need to see the timestamps
             }
         }
-    ])
-    if (messages?.length == 0)
-        throw new ApiError(401, "Unable to retreive messages");
+    ]);
     return res.status(201).json(new ApiResponse(201, messages, "messages aggregated"));
 
 })

@@ -114,8 +114,75 @@ const roomMessageList = asyncHandler(async (req, res) => {
 
 
 })
+
+const getRoomsForUser = async (userId) => {
+    try {
+        const results = await Room.aggregate([
+            {
+                $match: {
+                    members: new mongoose.Types.ObjectId(userId)
+                }
+            },
+            {
+                $lookup: {
+                    from: 'users', 
+                    localField: 'members',
+                    foreignField: '_id',
+                    as: 'memberDetails'
+                }
+            },
+            {
+                $unwind: "$memberDetails"
+            },
+            {
+                $group: {
+                    _id: "$_id",
+                    title: { $first: "$title" },
+                    update: { $first: "$update" },
+                    members: { $first: "$members" },
+                    memberDetails: { $push: "$memberDetails" },
+                    updatedAt: { $first: "$updatedAt" }
+                }
+            },
+            {
+                $sort: {
+                    updatedAt: -1
+                }
+            },
+            {
+                $project: {
+                    title: 1,
+                    update: 1,
+                    members: 1,
+                    memberDetails: {
+                        _id: 1,
+                        fullName: 1,
+                        email: 1,
+                        avatar: 1
+                    },
+                    updatedAt: 1
+                }
+            }
+        ]);
+
+        return results;
+    } catch (error) {
+        console.error('Error in aggregation pipeline:', error);
+        throw error;
+    }
+};
+
+
+const userRoomsList= asyncHandler(async (req, res) =>{
+    const user= req.user;
+    const result = await getRoomsForUser(user._id);
+    return res.status(201).json(new ApiResponse(201,result,"rooms aggregated"));
+})
+
+
 export {
     createRoom,
     addMember,
-    roomMessageList
+    roomMessageList,
+    userRoomsList
 }

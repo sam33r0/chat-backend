@@ -11,5 +11,5 @@ router.route('/group').post(roomMessage);
 router.route('/:rid').get(directMessList);
 router.route('/').post(directMessList);
 router.route('/:rid').get(roomMessageList);
-router.route('/').post(roomMessageList);
+router.route('/room').post(roomMessageList);
 export default router;

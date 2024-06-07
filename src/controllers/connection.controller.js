@@ -31,6 +31,7 @@ const getUserConnectionsWithDetails = async (userId) => {
                     user: { $first: "$user" },
                     contacts: {
                         $push: {
+                            _id:"$contactDetails._id",
                             contact: "$contacts.contact",
                             update: "$contacts.update",
                             fullName: "$contactDetails.fullName",

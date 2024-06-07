@@ -7,6 +7,9 @@ const roomSchema = new Schema({
         trim: true,
         index: true,
     },
+    update:{
+        type: String
+    },
     members: [
         {
             type: Schema.Types.ObjectId,

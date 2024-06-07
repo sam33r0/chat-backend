@@ -27,17 +27,20 @@ connectionsSchema.pre('save', function (next) {
     const connection = this;
 
     // Check for self-reference
-    if (connection.contacts.includes(connection.user)) {
+    if (connection.contacts.some(contactObj => contactObj.contact.equals(connection.user))) {
         return next(new ApiError('User cannot add themselves as a contact.'));
     }
 
     // Check for duplicate contacts
-    const uniqueContacts = [...new Set(connection.contacts.map(contact => contact.toString()))];
-    if (uniqueContacts.length !== connection.contacts.length) {
+    const contactIds = connection.contacts.map(contactObj => contactObj.contact.toString());
+    const uniqueContactIds = [...new Set(contactIds)];
+
+    if (uniqueContactIds.length !== contactIds.length) {
         return next(new ApiError(401, 'Duplicate contacts are not allowed.'));
     }
 
     next();
 });
+
 
 export const Connection = mongoose.model("Connection", connectionsSchema);
