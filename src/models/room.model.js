@@ -10,6 +10,9 @@ const roomSchema = new Schema({
     update:{
         type: String
     },
+    avatar:{
+        type: String
+    },
     members: [
         {
             type: Schema.Types.ObjectId,

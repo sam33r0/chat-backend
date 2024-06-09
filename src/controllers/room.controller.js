@@ -3,20 +3,26 @@ import { Room } from "../models/room.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
+import { Message } from "../models/messages.model.js";
 
 const createRoom = asyncHandler(async (req, res) => {
-    const { title } = req.body;
+    const { title, memberList, avatar } = req.body;
+
+    const existingRoom = await Room.findOne({ title });
     if (existingRoom) {
         throw new ApiError(402, "room already exist");
     }
     const user = new mongoose.Types.ObjectId(req.user?._id);
     const members = [];
+    if (memberList)
+        memberList.map((m) => members.push(new mongoose.Types.ObjectId(m._id)))
     members.push(user);
-    const existingRoom = await Room.findOne({ title });
-    
+
+
     const room = await Room.create({
         title,
-        members
+        members,
+        avatar
     })
     if (!room)
         throw new ApiError(401, "unable to create room");
@@ -25,10 +31,8 @@ const createRoom = asyncHandler(async (req, res) => {
 
 
 const addMember = asyncHandler(async (req, res) => {
-    const rid = req.params;
-    const user = req.user;
-    const { roomId, title } = req.body;
-    const fRoomId = rid || roomId;
+    const { roomId, title, memberList } = req.body;
+    const fRoomId =  roomId;
     if (!fRoomId && !title) {
         throw new ApiError(401, "room ID not found");
     }
@@ -37,20 +41,51 @@ const addMember = asyncHandler(async (req, res) => {
         throw new ApiError(401, " room not found");
     }
 
-    const member = new mongoose.Types.ObjectId(user?._id);
-    room.members.push(member);
+    memberList.map((mem)=>{
+        const member = new mongoose.Types.ObjectId(mem._id);
+        room.members.push(member);
+    })
+
     await room.save({ validateBeforeSave: false });
     return res.status(201).json(new ApiResponse(201, room, "member added"));
 })
 
-const roomMessageList = asyncHandler(async (req, res) => {
+const roomDetail = asyncHandler(async (req, res) => {
+    const { rid } = req.body;
+    const detail = await Room.aggregate([{
+        $match: {
+            _id: new mongoose.Types.ObjectId(rid)
+        }
+    },
+    {
+        $lookup: {
+            from: "users",
+            localField: "members",
+            foreignField: "_id",
+            as: "memberDetails"
+        }
+    },
+    {
+        $project: {
+            _id: 1,
+            title: 1,
+            update: 1,
+            createdAt: 1,
+            updatedAt: 1,
+            memberDetails: 1
+        }
+    }])
+    return res.status(201).json(new ApiResponse(201, detail, "aggregated"));
+})
 
-    const rid = req.params;
-    const { roomId } = req.body;
+const roomMessageList = asyncHandler(async (req, res) => {
+    const { roomId, page = 1, limit = 10 } = req.body;
     const user = req.user;
-    const rrid= rid || roomId;
+    const rrid = roomId;
     const id = new mongoose.Types.ObjectId(rrid);
-    const messages = await DirectMessage.aggregate([
+    const skip = (page - 1) * limit;
+
+    const messages = await Message.aggregate([
         {
             $match: {
                 room: id
@@ -99,21 +134,38 @@ const roomMessageList = asyncHandler(async (req, res) => {
             }
         },
         {
+            $sort: { createdAt: -1 } // Sort by createdAt in descending order to get the latest messages first
+        },
+        {
+            $skip: skip // Skip documents for pagination
+        },
+        {
+            $limit: limit // Limit documents for pagination
+        },
+        {
             $project: {
                 content: 1,
                 author: 1,
                 room: 1,
                 roomDetail: 1,
-                authorName: 1
+                authorName: 1,
+                createdAt: 1,
             }
         }
-    ])
-    if (messages?.length == 0)
-        throw new ApiError(401, "Unable to retreive messages");
-    return res.status(201).json(new ApiResponse(201, messages, "messages aggregated"));
+    ]);
+
+    // Count total messages for pagination metadata
+    const totalMessages = await Message.countDocuments({ room: id });
+
+    return res.status(201).json(new ApiResponse(201, {
+        messages,
+        totalPages: Math.ceil(totalMessages / limit),
+        currentPage: page,
+        totalMessages
+    }, "messages aggregated"));
+});
 
 
-})
 
 const getRoomsForUser = async (userId) => {
     try {
@@ -125,7 +177,7 @@ const getRoomsForUser = async (userId) => {
             },
             {
                 $lookup: {
-                    from: 'users', 
+                    from: 'users',
                     localField: 'members',
                     foreignField: '_id',
                     as: 'memberDetails'
@@ -139,6 +191,7 @@ const getRoomsForUser = async (userId) => {
                     _id: "$_id",
                     title: { $first: "$title" },
                     update: { $first: "$update" },
+                    avatar: { $first: "$avatar" },
                     members: { $first: "$members" },
                     memberDetails: { $push: "$memberDetails" },
                     updatedAt: { $first: "$updatedAt" }
@@ -154,6 +207,7 @@ const getRoomsForUser = async (userId) => {
                     title: 1,
                     update: 1,
                     members: 1,
+                    avatar: 1,
                     memberDetails: {
                         _id: 1,
                         fullName: 1,
@@ -173,10 +227,10 @@ const getRoomsForUser = async (userId) => {
 };
 
 
-const userRoomsList= asyncHandler(async (req, res) =>{
-    const user= req.user;
+const userRoomsList = asyncHandler(async (req, res) => {
+    const user = req.user;
     const result = await getRoomsForUser(user._id);
-    return res.status(201).json(new ApiResponse(201,result,"rooms aggregated"));
+    return res.status(201).json(new ApiResponse(201, result, "rooms aggregated"));
 })
 
 
@@ -184,5 +238,6 @@ export {
     createRoom,
     addMember,
     roomMessageList,
-    userRoomsList
+    userRoomsList,
+    roomDetail
 }

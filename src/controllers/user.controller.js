@@ -4,6 +4,7 @@ import { User } from "../models/user.model.js"
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { Connection } from "../models/connections.model.js";
 import mongoose from "mongoose";
+import { Room } from "../models/room.model.js";
 const generateAccessAndRefreshToken = async (userId) => {
     try {
         const user = await User.findById(userId)
@@ -46,11 +47,12 @@ const getUserConnectionsWithDetails = async (userId) => {
                     user: { $first: "$user" },
                     contacts: {
                         $push: {
+                            _id: "$contactDetails._id",
                             contact: "$contacts.contact",
                             update: "$contacts.update",
                             fullName: "$contactDetails.fullName",
                             avatar: "$contactDetails.avatar",
-                            updatedAt: "$contactDetails.updatedAt"
+                            updatedAt: "$contacts.updatedAt"
                         }
                     }
                 }
@@ -59,12 +61,12 @@ const getUserConnectionsWithDetails = async (userId) => {
                 $project: {
                     _id: 1,
                     user: 1,
-                    contacts: 1
-                }
-            },
-            {
-                $sort: {
-                    "contacts.updatedAt": -1
+                    contacts: {
+                        $sortArray: {
+                            input: "$contacts",
+                            sortBy: { updatedAt: -1 }
+                        }
+                    }
                 }
             }
         ]);
@@ -76,6 +78,64 @@ const getUserConnectionsWithDetails = async (userId) => {
     }
 };
 
+const getRoomsForUser = async (userId) => {
+    try {
+        const results = await Room.aggregate([
+            {
+                $match: {
+                    members: new mongoose.Types.ObjectId(userId)
+                }
+            },
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: 'members',
+                    foreignField: '_id',
+                    as: 'memberDetails'
+                }
+            },
+            {
+                $unwind: "$memberDetails"
+            },
+            {
+                $group: {
+                    _id: "$_id",
+                    title: { $first: "$title" },
+                    update: { $first: "$update" },
+                    avatar: {$first: "$avatar"},
+                    members: { $first: "$members" },
+                    memberDetails: { $push: "$memberDetails" },
+                    updatedAt: { $first: "$updatedAt" }
+                }
+            },
+            {
+                $sort: {
+                    updatedAt: -1
+                }
+            },
+            {
+                $project: {
+                    title: 1,
+                    update: 1,
+                    members: 1,
+                    avatar: 1,
+                    memberDetails: {
+                        _id: 1,
+                        fullName: 1,
+                        email: 1,
+                        avatar: 1
+                    },
+                    updatedAt: 1
+                }
+            }
+        ]);
+
+        return results;
+    } catch (error) {
+        console.error('Error in aggregation pipeline:', error);
+        throw error;
+    }
+};
 
 const register = asyncHandler(async (req, res) => {
     const { email, fullName, avatar, age, password } = req.body;
@@ -124,7 +184,6 @@ const register = asyncHandler(async (req, res) => {
 
 const loginUser = asyncHandler(async (req, res) => {
     const { email, password } = req.body;
-    console.log(email,password);
     if (!email) {
         throw new ApiError(400, "username or email is required");
     }
@@ -135,6 +194,7 @@ const loginUser = asyncHandler(async (req, res) => {
         throw new ApiError(404, "user does not exist please register");
     }
     const connections = await getUserConnectionsWithDetails(user._id);
+    const roomList= await getRoomsForUser(user._id);
     const isPasswordValid = await user.isPasswordCorrect(password);
     if (!isPasswordValid) {
         throw new ApiError(401, "Invalid Password");
@@ -149,7 +209,7 @@ const loginUser = asyncHandler(async (req, res) => {
     return res.status(200).cookie("accessToken", accessToken, options).cookie("refreshToken", refreshToken, options).json(
         new ApiResponse(200,
             {
-                user: loggedInUser, accessToken, refreshToken, connections
+                user: loggedInUser, accessToken, refreshToken, connections, roomList
             },
             "User logged In Successfully"
         )

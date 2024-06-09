@@ -7,9 +7,7 @@ const router = Router();
 router.use(verifyJWT);
 
 router.route('/direct').post(directMessage);
-router.route('/group').post(roomMessage);
-router.route('/:rid').get(directMessList);
+router.route('/room-message').post(roomMessage);
 router.route('/').post(directMessList);
-router.route('/:rid').get(roomMessageList);
 router.route('/room').post(roomMessageList);
 export default router;

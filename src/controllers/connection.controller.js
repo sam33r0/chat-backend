@@ -4,6 +4,7 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { Connection } from "../models/connections.model.js";
 import mongoose from "mongoose";
 import { User } from "../models/user.model.js";
+import { Room } from "../models/room.model.js";
 
 const getUserConnectionsWithDetails = async (userId) => {
     try {
@@ -31,12 +32,12 @@ const getUserConnectionsWithDetails = async (userId) => {
                     user: { $first: "$user" },
                     contacts: {
                         $push: {
-                            _id:"$contactDetails._id",
+                            _id: "$contactDetails._id",
                             contact: "$contacts.contact",
                             update: "$contacts.update",
                             fullName: "$contactDetails.fullName",
                             avatar: "$contactDetails.avatar",
-                            updatedAt: "$contactDetails.updatedAt"
+                            updatedAt: "$contacts.updatedAt"
                         }
                     }
                 }
@@ -45,12 +46,71 @@ const getUserConnectionsWithDetails = async (userId) => {
                 $project: {
                     _id: 1,
                     user: 1,
-                    contacts: 1
+                    contacts: {
+                        $sortArray: {
+                            input: "$contacts",
+                            sortBy: { updatedAt: -1 }
+                        }
+                    }
+                }
+            }
+        ]);
+
+        return results;
+    } catch (error) {
+        console.error('Error in aggregation pipeline:', error);
+        throw error;
+    }
+};
+
+const getRoomsForUser = async (userId) => {
+    try {
+        const results = await Room.aggregate([
+            {
+                $match: {
+                    members: new mongoose.Types.ObjectId(userId)
+                }
+            },
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: 'members',
+                    foreignField: '_id',
+                    as: 'memberDetails'
+                }
+            },
+            {
+                $unwind: "$memberDetails"
+            },
+            {
+                $group: {
+                    _id: "$_id",
+                    title: { $first: "$title" },
+                    avatar: {$first: "$avatar"},
+                    update: { $first: "$update" },
+                    members: { $first: "$members" },
+                    memberDetails: { $push: "$memberDetails" },
+                    updatedAt: { $first: "$updatedAt" }
                 }
             },
             {
                 $sort: {
-                    "contacts.updatedAt": -1
+                    updatedAt: -1
+                }
+            },
+            {
+                $project: {
+                    title: 1,
+                    update: 1,
+                    members: 1,
+                    avatar: 1,
+                    memberDetails: {
+                        _id: 1,
+                        fullName: 1,
+                        email: 1,
+                        avatar: 1
+                    },
+                    updatedAt: 1
                 }
             }
         ]);
@@ -101,8 +161,9 @@ const createConnection = asyncHandler(async (req, res) => {
 const getConnections = asyncHandler(async (req, res) => {
     const user = req.user;
     const connections = await getUserConnectionsWithDetails(user._id);
+    const roomList = await getRoomsForUser(user._id);
     if (!connections) throw new ApiError(401, "Unable to find connections");
-    return res.status(201).json(new ApiResponse(201, { user, connections }, "Contacts found"));
+    return res.status(201).json(new ApiResponse(201, { user, connections, roomList }, "Contacts found"));
 });
 
 export {

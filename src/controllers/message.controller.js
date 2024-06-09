@@ -37,12 +37,12 @@ const directMessage = asyncHandler(async (req, res) => {
 })
 
 const roomMessage = asyncHandler(async (req, res) => {
-    const roomId = req.params;
+    
     const user = req.user;
     const { roomID, content, roomName } = req.body;
-    const fRoomId = roomID || roomId;
+    const _id = roomID;
     const room = await Room.findOne({
-        $or: [{ fRoomId }, { roomName }]
+        $or: [{ _id }, { roomName }]
     });
     if (!room) {
         throw new ApiError(401, "Room not found")
@@ -58,15 +58,19 @@ const roomMessage = asyncHandler(async (req, res) => {
         author: userObjectId,
         room: RoomObjectId
     })
+    room.update = `new message at ${new Date()} by ${user.fullName}`;
     if (!message)
         throw new ApiError(401, "Unable to send the message");
+    await room.save({ validateBeforeSave: false });
     return res.status(201).json(new ApiResponse(201, message, "Message sent successfully"));
 })
 
 const directMessList = asyncHandler(async (req, res) => {
-    const { rec } = req.body;
+    const { rec, page = 1, limit = 10 } = req.body;
     const user = req.user;
     const id = rec;
+    const skip = (page - 1) * limit;
+
     const messages = await DirectMessage.aggregate([
         {
             $match: {
@@ -125,11 +129,17 @@ const directMessList = asyncHandler(async (req, res) => {
             }
         },
         {
-            $sort: { createdAt: 1 }  // Sort by createdAt in ascending order
+            $sort: { createdAt: -1 } // Sort by createdAt in descending order
+        },
+        {
+            $skip: skip // Skip documents for pagination
+        },
+        {
+            $limit: limit // Limit documents for pagination
         },
         {
             $project: {
-                _id: 0,
+                _id: 1,
                 recieverUser: 1,
                 sender: 1,
                 content: 1,
@@ -137,9 +147,32 @@ const directMessList = asyncHandler(async (req, res) => {
             }
         }
     ]);
-    return res.status(201).json(new ApiResponse(201, messages, "messages aggregated"));
 
-})
+    // Count total messages for pagination metadata
+    const totalMessages = await DirectMessage.countDocuments({
+        $or: [
+            {
+                $and: [
+                    { reciever: new mongoose.Types.ObjectId(user._id) },
+                    { author: new mongoose.Types.ObjectId(id) }
+                ]
+            },
+            {
+                $and: [
+                    { reciever: new mongoose.Types.ObjectId(id) },
+                    { author: new mongoose.Types.ObjectId(user._id) }
+                ]
+            }
+        ]
+    });
+
+    return res.status(201).json(new ApiResponse(201, {
+        messages,
+        totalPages: Math.ceil(totalMessages / limit),
+        currentPage: page,
+        totalMessages
+    }, "messages aggregated"));
+});
 
 export {
     directMessage,
