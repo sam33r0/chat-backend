@@ -102,7 +102,7 @@ const getRoomsForUser = async (userId) => {
                     _id: "$_id",
                     title: { $first: "$title" },
                     update: { $first: "$update" },
-                    avatar: {$first: "$avatar"},
+                    avatar: { $first: "$avatar" },
                     members: { $first: "$members" },
                     memberDetails: { $push: "$memberDetails" },
                     updatedAt: { $first: "$updatedAt" }
@@ -194,7 +194,7 @@ const loginUser = asyncHandler(async (req, res) => {
         throw new ApiError(404, "user does not exist please register");
     }
     const connections = await getUserConnectionsWithDetails(user._id);
-    const roomList= await getRoomsForUser(user._id);
+    const roomList = await getRoomsForUser(user._id);
     const isPasswordValid = await user.isPasswordCorrect(password);
     if (!isPasswordValid) {
         throw new ApiError(401, "Invalid Password");
@@ -243,9 +243,83 @@ const logoutJWTUser = asyncHandler(async (req, res) => {
     return res.status(200).clearCookie("accessToken", options).clearCookie("refreshToken", options).json(new ApiResponse(200, {}, "user logged out successfully"));
 })
 
+const updateAccountDetails = asyncHandler(async (req, res) => {
+    const { fullName, email } = req.body;
+    if (!fullName && !email) {
+        throw new ApiError(400, " All fields are required");
+    }
+    if (email) {
+        const existedUser = await User.findOne({
+            email
+        })
+        if (existedUser) {
+            throw new ApiError(400, "email already exists");
+        }
+    }
+    let user;
+    if (email && fullName) {
+        user = await User.findByIdAndUpdate(req.user?._id, {
+            $set: {
+                fullName, email
+            }
+        }, { new: true }).select("-password ");
+    }
+    if (!email && fullName) {
+        user = await User.findByIdAndUpdate(req.user?._id, {
+            $set: {
+                fullName
+            }
+        }, { new: true }).select("-password ");
+    }
+    if (email && !fullName) {
+        user = await User.findByIdAndUpdate(req.user?._id, {
+            $set: {
+                email
+            }
+        }, { new: true }).select("-password ");
+    }
+    res.status(200).json(new ApiResponse(200, user, "Account details uploaded successfully"));
+
+})
+
+const updateUserAvatar = asyncHandler(async (req, res) => {
+    // const avatarLocalPath = req.file?.path
+    // if (!avatarLocalPath) {
+    //     throw new ApiError(400, "Avatar file is missing");
+    // }
+    const {avatar} = req.body;
+    if (!avatar.url) {
+        throw new ApiError(400, "Cloudinary upload error");
+    }
+    const oldAvatar = req.user?.avatar;
+    const user = await User.findByIdAndUpdate(
+        req.user?._id, {
+        $set: {
+            avatar: avatar.url
+        }
+    }, { new: true }
+    ).select("-password ");
+    return res.status(200).json(new ApiResponse(200, user, "avatar updated successfull"));
+})
+
+const changeCurrentPassword = asyncHandler(async (req, res) => {
+    const { oldPassword, newPassword } = req.body;
+    const user = await User.findById(req.user?._id);
+    const isPasswordCorrect = await user.isPasswordCorrect(oldPassword);
+    if (!isPasswordCorrect) {
+        throw new ApiError(400, "Invalid old password");
+    }
+    user.password = newPassword;
+    await user.save({ validateBeforeSave: false });
+    return res.status(200).json(new ApiResponse(200, {}, "password change successfully"));
+})
+
 export {
     register,
     loginUser,
     logoutUser,
-    logoutJWTUser
+    logoutJWTUser,
+    updateAccountDetails,
+    updateUserAvatar,
+    changeCurrentPassword
 }
