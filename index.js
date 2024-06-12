@@ -30,13 +30,11 @@ connectDB()
             socket.on('setup', (userdata) => {
                 if (userdata._id)
                     socket.join(userdata._id);
-                console.log("setup done for ", userdata._id, "at ", socket.id);
                 socket.emit("connected");
             })
 
             socket.on('join-room-chat', (roomId) => {
                 socket.join(roomId);
-                console.log("user joined room = ", roomId);
             })
             socket.on('new-room-message', (newMessageRecieved) => {
                 let chat = newMessageRecieved?.currentRoom;
@@ -51,13 +49,11 @@ connectDB()
                     if (e == author._id) {
                         return;
                     }
-                    console.log("emiting for ", e);
                     socket.in(e).emit('new-room-messages-arrived', { mess: res, author, currentRoom: chat._id, roomTitle: chat.title });
                 })
             })
             socket.on('join-direct-chat', (chatId) => {
                 socket.join(chatId._id);
-                console.log("user connected to = ", chatId._id);
             })
             socket.on('new-direct-message', (newMessageRecieved) => {
                 let reciever = newMessageRecieved.reciever;
