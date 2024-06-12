@@ -7,11 +7,12 @@ import {
     register,
     updateUserAvatar,
     updateAccountDetails,
-    changeCurrentPassword
+    changeCurrentPassword,
+    getCurrentUser
 } from "../controllers/user.controller.js";
 const router = Router();
 
-router.route('/get-current-user').get(verifyJWT, (req, res) => res.status(200).json({user: req.user}))
+router.route('/get-current-user').post(verifyJWT, getCurrentUser)
 router.route('/register').post(register);
 router.route('/login').post(loginUser);
 router.route('/Glogout').get(verifyJWT, logoutUser);

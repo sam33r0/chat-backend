@@ -219,9 +219,15 @@ const loginUser = asyncHandler(async (req, res) => {
 const logoutUser = asyncHandler(async (req, res) => {
     // cookies clear
     // reset refreshToken
+    const options = {
+        httpOnly: true,
+        secure: true,
+    }
+    res.clearCookie("accessToken", options).clearCookie("refreshToken", options);
     req.logout(function (err) {
         res.redirect(process.env.CORS_ORIGIN + '/login');
     })
+
 })
 
 const logoutJWTUser = asyncHandler(async (req, res) => {
@@ -287,7 +293,7 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
     // if (!avatarLocalPath) {
     //     throw new ApiError(400, "Avatar file is missing");
     // }
-    const {avatar} = req.body;
+    const { avatar } = req.body;
     if (!avatar.url) {
         throw new ApiError(400, "Cloudinary upload error");
     }
@@ -314,6 +320,10 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
     return res.status(200).json(new ApiResponse(200, {}, "password change successfully"));
 })
 
+const getCurrentUser = asyncHandler(async (req, res) => {
+    return res.status(200).json({ user: req.user });
+})
+
 export {
     register,
     loginUser,
@@ -321,5 +331,6 @@ export {
     logoutJWTUser,
     updateAccountDetails,
     updateUserAvatar,
-    changeCurrentPassword
+    changeCurrentPassword,
+    getCurrentUser
 }

@@ -71,8 +71,8 @@ passport.deserializeUser((user, done) => {
 
 app.get('/auth/google', passport.authenticate("google", { scope: ["profile", "email"] }))
 app.get('/auth/google/callback', passport.authenticate("google", {
-    successRedirect: "http://localhost:5173/dashboard/google",
-    failureRedirect: "http://localhost:5173/login"
+    successRedirect: `${process.env.CLIENT_URI}/dashboard/google`,
+    failureRedirect: `${process.env.CLIENT_URI}/login`
 }))
 app.get('/', (req, res) => {
     res.json({ "message": "It is live" })
