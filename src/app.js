@@ -10,8 +10,8 @@ import { Connection } from "./models/connections.model.js";
 import mongoose from "mongoose";
 const app = express();
 app.use(cors({
-    origin: process.env.CORS_ORIGIN,
-    methods: "GET,POST,PUT,DELETE",
+
+    origin: true,
     credentials: true,
 }));
 const client_id = process.env.CLIENT_ID;
@@ -76,7 +76,7 @@ app.get('/auth/google/callback', passport.authenticate("google", {
 }))
 app.get('/', (req, res) => {
     res.json({ "message": "It is live" })
-}); 
+});
 
 import RoomRouter from "./routes/room.routes.js";
 app.use("/api/v1/room", RoomRouter);
