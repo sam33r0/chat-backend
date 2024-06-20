@@ -39,6 +39,7 @@ passport.use(
         scope: ["profile", "email"]
     },
         async (accessToken, refreshToken, profile, done) => {
+            console.log("inside the Oauth testing");
             try {
                 let user = await User.findOne({
                     email: profile.emails[0].value
